@@ -1,76 +1,225 @@
-# RedBus Clone (Flask) - Local DB (SQLite) + Optional MySQL
+# Bus Ticket Reservation System
 
-This is a complete minimal RedBus-like application using Flask, SQLAlchemy and simple Jinja2 templates.
-By default it uses SQLite for local development. You can optionally configure a local MySQL server via `DB_URL` in `.env`.
+A web-based Bus Ticket Reservation System built using **Python, Flask, SQLAlchemy, SQLite, HTML, CSS, JavaScript and Bootstrap**. The application provides a platform for users to search buses, select seats, calculate ticket prices and manage their bookings. It also supports agency registration and bus management.
 
-## What's included
-- app.py : Flask app + routes + models
-- templates/ : Jinja2 templates for index, login, register, search, seats, admin
-- static/ : simple CSS
-- init_db.py : Creates tables and seeds admin + cities (works for SQLite & MySQL)
-- import_buses_csv.py : Imports buses.csv (example provided)
-- buses.csv : 5 sample buses
-- seed_all.py : Seeds users, cities, buses, seats and bookings
-- requirements.txt, .env.example
+The project uses SQLite as its default database, making local setup simple without requiring a separate database server.
 
-## Quick start (SQLite - easiest)
+## Features
 
-1. Create and activate virtualenv:
-   ```bash
-   python -m venv venv
-   # Windows PowerShell
-   .\venv\Scripts\Activate.ps1
-   # Linux / macOS
-   source venv/bin/activate
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Copy `.env.example` to `.env` (optional):
-   ```bash
-   copy .env.example .env   # Windows (cmd) or use your editor
-   cp .env.example .env    # Linux/macOS
-   ```
-   Leave `DB_URL` blank to use SQLite `redbus.db` in project folder.
+### User Functionality
+- User registration and login.
+- Search buses by source and destination.
+- View available buses and their details.
+- View bus seat layouts.
+- Select seats and calculate ticket prices.
+- Dynamic seat pricing based on seat selection.
+- Passenger information and booking management.
+- View booking history.
+- Download booking tickets in PDF format.
 
-4. Initialize DB and seed minimal data:
-   ```bash
-   python init_db.py
-   ```
+### Bus Agency Functionality
+- Agency registration and login.
+- Agency dashboard.
+- Add and manage buses.
+- Configure bus details, routes and schedules.
+- Add cities and intermediate stops.
+- Configure bus amenities.
+- Automatic seat generation based on bus type.
+- Manage agency-owned buses.
 
-5. (Optional) Import sample buses:
-   ```bash
-   python import_buses_csv.py
-   ```
+### Additional Features
+- Role-based user functionality.
+- Password hashing.
+- SQLAlchemy ORM for database operations.
+- SQLite database integration.
+- PDF ticket generation using PDFKit and wkhtmltopdf.
 
-6. Run the app:
-   ```bash
-   flask run
-   ```
-   or
-   ```bash
-   python app.py
-   ```
-   Open http://127.0.0.1:5000
+## Technology Stack
 
-Default admin: admin@example.com / adminpass
+| Category | Technologies |
+|---|---|
+| Programming Language | Python |
+| Backend Framework | Flask |
+| ORM | Flask-SQLAlchemy |
+| Database | SQLite |
+| Frontend | HTML, CSS, JavaScript |
+| Template Engine | Jinja2 |
+| Authentication | Flask-Login |
+| Password Security | Werkzeug |
+| PDF Generation | PDFKit, wkhtmltopdf |
+| Environment Configuration | python-dotenv |
 
-## Use MySQL instead of SQLite
-1. Create MySQL database and user (example):
-   ```sql
-   CREATE DATABASE redbus_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'rbuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'rbpass';
-   GRANT ALL PRIVILEGES ON redbus_db.* TO 'rbuser'@'localhost';
-   FLUSH PRIVILEGES;
-   ```
-2. In `.env`, set `DB_URL`:
-   ```env
-   DB_URL=mysql+pymysql://rbuser:rbpass@127.0.0.1:3306/redbus_db?charset=utf8mb4
-   ```
-3. Install dependencies and run `python init_db.py` as above.
+## Project Structure
 
-## Notes & Security
-- `.env` contains secrets; don't commit it to git. Add `.env` to `.gitignore`.
-- Passwords in sample data are hashed.
-- For production use, add CSRF protection, input validation, and a real payment integration.
+```text
+Bus-Ticket-Reservation/
+│
+├── app.py
+├── init_db.py
+├── seed_all.py
+├── import_buses_csv.py
+├── buses.csv
+├── requirements.txt
+├── .env.example
+├── .gitignore
+├── README.md
+│
+├── migrations/
+│
+├── static/
+│   └── bus_images/
+│
+└── templates/
+    ├── admin.html
+    ├── agency_dashboard.html
+    ├── base.html
+    ├── booking_success.html
+    ├── index.html
+    ├── login.html
+    ├── my_bookings.html
+    ├── register.html
+    ├── register_agency.html
+    ├── search.html
+    ├── seats.html
+    └── ticket_pdf.html
+```
+
+## Installation and Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/vyenkateshchougule11-ops/bus-ticket-reservation-system.git
+
+cd bus-ticket-reservation-system
+```
+
+### 2. Create a Virtual Environment
+
+**Windows PowerShell:**
+
+```powershell
+python -m venv .venv
+
+.\.venv\Scripts\Activate.ps1
+```
+
+**Linux / macOS:**
+
+```bash
+python3 -m venv .venv
+
+source .venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 4. Configure Environment Variables
+
+Create a `.env` file by copying `.env.example`.
+
+**Windows PowerShell:**
+
+```powershell
+Copy-Item .env.example .env
+```
+
+**Linux / macOS:**
+
+```bash
+cp .env.example .env
+```
+
+Update the `.env` file:
+
+```env
+SECRET_KEY=your-own-secure-secret-key
+
+DB_URL=sqlite:///redbus.db
+
+WKHTMLTOPDF_PATH=
+```
+
+- `SECRET_KEY`: Use a randomly generated secret key.
+- `DB_URL`: SQLite database configuration.
+- `WKHTMLTOPDF_PATH`: Optional path to the wkhtmltopdf executable.
+
+Keep `.env` private and never commit it to GitHub.
+
+### 5. Initialize and Run the Application
+
+Run:
+
+```bash
+python app.py
+```
+
+The application creates the database tables using SQLAlchemy when the application starts.
+
+### 6. Open the Application
+
+Visit:
+
+```text
+http://127.0.0.1:5000
+```
+
+## Database
+
+The application uses **SQLite with Flask-SQLAlchemy**.
+
+The database stores application information such as:
+
+- Users
+- Agencies
+- Cities
+- Buses
+- Seats
+- Stations
+- Bookings
+
+The SQLite database is generated locally when the application is initialized.
+
+## PDF Ticket Generation
+
+The application uses PDFKit to generate downloadable booking tickets.
+
+PDF generation requires the external **wkhtmltopdf** executable in addition to the Python `pdfkit` package.
+
+Install wkhtmltopdf separately and either:
+
+- Add its executable to your system PATH, or
+- Configure its location using `WKHTMLTOPDF_PATH` in `.env`.
+
+PDF generation will not work until this external dependency is configured.
+
+## Security Considerations
+
+- Passwords are stored using password hashing.
+- Secret keys and environment-specific configuration are kept outside the public repository.
+- The `.env` file and local database files are excluded using `.gitignore`.
+- Production deployment should include CSRF protection, stronger input validation, secure session configuration and appropriate authorization checks.
+
+## Future Improvements
+
+- Online payment gateway integration.
+- Email and SMS booking notifications.
+- Improved responsive user interface.
+- Enhanced administrative dashboard.
+- Production deployment and hosting.
+- Automated testing and improved application security.
+
+## Author
+
+**Vyenkatesh Chougule**
+
+- GitHub: [@vyenkateshchougule11-ops](https://github.com/vyenkateshchougule11-ops)
+- LinkedIn: [Connect with me](https://www.linkedin.com/in/vyenkatesh-chougule-a46799390/)
+
+---
+
+*This project was developed as a practical full-stack web application to demonstrate Python backend development, database integration, authentication and reservation management.*

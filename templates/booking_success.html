@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card shadow border-0">
+                <div class="card-body p-5">
+                    <div class="mb-4">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                    </div>
+                    <h2 class="fw-bold">Booking Confirmed!</h2>
+                    <p class="text-muted">Your seats have been successfully reserved for <strong>{{ main_booking.bus.name }}</strong>.</p>
+                    
+                    <div class="alert alert-info py-2 small">
+                        <i class="bi bi-info-circle"></i> A confirmation email has been sent to {{ current_user.email }}
+                    </div>
+
+                    <div class="table-responsive mt-4">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Passenger Name</th>
+                                    <th>Seat</th>
+                                    <th>Age/Gender</th>
+                                    <th>Ticket</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for b in bookings %}
+                                <tr>
+                                    <td>{{ b.passenger_name }}</td>
+                                    <td class="fw-bold text-danger">{{ b.seat.seat_no }}</td>
+                                    <td>{{ b.passenger_age }} / {{ b.passenger_gender }}</td>
+                                    <td>
+                                        <a href="{{ url_for('download_ticket', booking_id=b.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-download"></i> PDF
+                                        </a>
+                                        <button onclick="window.print()" class="btn btn-primary">
+                                            <i class="bi bi-printer"></i> Print Ticket
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 d-grid gap-2 d-md-block">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary px-4">Return Home</a>
+                        <button class="btn btn-primary px-4" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print Summary
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

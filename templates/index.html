@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h3 class="card-title mb-3">Find buses</h3>
+    <form method="post" action="{{ url_for('search') }}" class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label">Source</label>
+        <select class="form-select" name="source" required>
+          <option value="">Select source</option>
+          {% for c in cities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">Destination</label>
+        <select class="form-select" name="dest" required>
+          <option value="">Select destination</option>
+          {% for c in cities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-grid">
+        <button class="btn btn-primary">Search</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mt-4 text-center text-muted">
+  <small>Tip: select source and destination to view available buses</small>
+</div>
+{% endblock %}

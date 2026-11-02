@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agency Dashboard - {{ current_user.agency.name if current_user.agency else 'Agency' }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                {% if current_user.agency %}
+                    {{ current_user.agency.name }} Portal
+                {% else %}
+                    BusReserve Agency Portal
+                {% endif %}
+            </span>
+            <div class="d-flex align-items-center">
+                <span class="navbar-text text-white me-3 d-none d-md-inline">Welcome, {{ current_user.email }}</span>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white"><strong><i class="bi bi-geo-alt"></i> Add New City</strong></div>
+                    <div class="card-body">
+                        <form action="{{ url_for('add_city') }}" method="POST">
+                            <div class="input-group">
+                                <input type="text" name="city_name" class="form-control" placeholder="City Name" required>
+                                <button class="btn btn-success" type="submit">Add</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white"><strong><i class="bi bi-bus-front"></i> Schedule New Bus</strong></div>
+                    <div class="card-body">
+                        <form action="{{ url_for('add_bus') }}" method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label class="form-label small">Bus Name</label>
+                                <input type="text" name="name" class="form-control" placeholder="e.g. Pooja Express" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <!-- <label class="form-label small">Type</label>
+                                    <select name="bus_type" class="form-select">
+                                        <option value="Seater">Seater</option>
+                                        <option value="Sleeper">Sleeper</option>
+                                    </select> -->
+                                    <label class="form-label small">Bus Type</label>
+                                    <select name="bus_type" class="form-select" required>
+                                        <option value="Sleeper">Sleeper</option>
+                                        <option value="Seater">Seater</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label small">Layout</label>
+                                    <select name="layout_type" class="form-select">
+                                        <option value="2+2">2+2</option>
+                                        <option value="2+1">2+1</option>
+                                        <option value="1+1">1+1</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">Departure Time</label>
+                                <input type="datetime-local" name="departure_time" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">Duration (Hours)</label>
+                                <input type="number" step="0.1" name="duration" class="form-control" placeholder="5.5" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label small">Source</label>
+                                    <select name="source_id" class="form-select">
+                                        {% for city in cities %}<option value="{{ city.id }}">{{ city.name }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label small">Dest</label>
+                                    <select name="dest_id" class="form-select">
+                                        {% for city in cities %}<option value="{{ city.id }}">{{ city.name }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">Base Price</label>
+                                <input type="number" name="base_price" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="is_ac" id="ac">
+                                    <label class="form-check-label small" for="ac">AC</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="has_food" id="food">
+                                    <label class="form-check-label small" for="food">Food</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">Images</label>
+                                <input type="file" name="image_1" class="form-control form-control-sm mb-1">
+                                <input type="file" name="image_2" class="form-control form-control-sm">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Schedule Bus</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white"><strong><i class="bi bi-list-ul"></i> Your Fleet</strong></div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Bus Details</th>
+                                        <th>Schedule</th>
+                                        <th>Fare</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for bus in buses %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ bus.name }}</strong><br>
+                                            <span class="badge bg-secondary small">{{ bus.bus_type }}</span>
+                                        </td>
+                                        <td>
+                                            <small>{{ bus.departure_date_time.strftime('%d %b, %H:%M') }}</small>
+                                        </td>
+                                        <td><strong>Rs.{{ bus.base_price }}</strong></td>
+                                        <!-- <td>
+                                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#stopModal{{ bus.id }}">
+                                                Manage Stops
+                                            </button>
+                                        </td> -->
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#stopModal{{ bus.id }}">
+                                                    <i class="bi bi-geo"></i> Manage Stops
+                                                </button>
+
+                                                <form action="{{ url_for('delete_bus', bus_id=bus.id) }}" method="POST" 
+                                                    onsubmit="return confirm('Are you sure? This will permanently delete the bus, all associated seats, and all customer bookings.');">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% for bus in buses %}
+    <div class="modal fade" id="stopModal{{ bus.id }}" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <form action="{{ url_for('agency_add_stop', bus_id=bus.id) }}" method="POST">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">Add Stop: {{ bus.name }}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Station Name</label>
+                            <input type="text" name="name" class="form-control" placeholder="Station name" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Arrival Time</label>
+                                <input type="text" name="arrival" class="form-control" placeholder="e.g. 22:30" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Price +/-</label>
+                                <input type="number" step="0.1" name="adjustment" class="form-control" value="0.0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary px-4">Save Stop</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    /* Bus Container Styling */
+    .bus-container {
+        background: #f8f9fa;
+        padding: 40px 25px;
+        border-radius: 25px;
+        display: inline-block;
+        border: 2px solid #e9ecef;
+        position: relative;
+    }
+
+    .steering-icon {
+        font-size: 2.5rem;
+        color: #adb5bd;
+        margin-bottom: 20px;
+        display: block;
+        text-align: right;
+    }
+
+    /* Standard Seat Styling */
+    .seat {
+        width: 55px;
+        height: 55px;
+        background: #ffffff;
+        border: 2px solid #28a745;
+        border-radius: 12px;
+        text-align: center;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        transition: 0.3s;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    /* Sleeper Berth Styling - Horizontally Wider */
+    .sleeper-berth {
+        width: 80px !important;
+        height: 50px !important;
+        border-radius: 6px !important;
+    }
+
+    /* Grid for Sleeper (2+1) */
+    .sleeper-grid {
+        display: grid;
+        grid-template-columns: 80px 40px 80px 80px !important; 
+        grid-gap: 15px;
+        justify-content: center;
+    }
+
+    /* Grid for Seater (2+2) */
+    .seater-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 55px) !important; 
+        grid-gap: 15px;
+        justify-content: center;
+    }
+
+    .seat:hover:not(.booked) { background-color: #f0fff4; transform: translateY(-2px); }
+    .seat.booked { background-color: #e9ecef; border-color: #dee2e6; color: #adb5bd; cursor: not-allowed; }
+    .seat.selected { background-color: #007bff; color: white; border-color: #0056b3; }
+    .aisle { visibility: hidden; }
+    .passenger-card { background: #f8f9fa; border-left: 4px solid #007bff; }
+</style>
+
+<div class="container mt-4">
+    <div class="row bus-info-header border-bottom pb-3 mb-4">
+        <div class="col-md-8">
+            <h3>{{ bus.name }}</h3>
+            <p class="text-muted">
+                {{ bus.bus_type }} | Layout: {{ bus.layout_type }} | 
+                <span class="text-primary">{{ bus.departure_date_time.strftime('%I:%M %p') }} - {{ bus.arrival_date_time.strftime('%I:%M %p') }}</span>
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <small class="text-muted">Total Fare</small>
+            <h2 class="text-success" id="display_price">₹ 0</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-7 text-center">
+            {% set is_sleeper = bus.bus_type == 'Sleeper' %}
+
+            {# --- UPPER DECK (Only for Sleepers) --- #}
+            {% set upper_seats = seats | selectattr("deck", "equalto", "Upper") | list %}
+            {% if upper_seats %}
+            <div class="deck-label mb-2"><span class="badge bg-secondary">Upper Deck</span></div>
+            <div class="bus-container shadow-sm mb-5">
+                <div class="bus-grid sleeper-grid">
+                    {% for r in range(1, 7) %}
+                        {% for c in [1, 2, 3, 4] %} {# Col 2 is the aisle #}
+                            {% set seat = upper_seats | selectattr("row", "equalto", r) | selectattr("column", "equalto", c) | first %}
+                            {% if seat %}
+                                <div class="seat sleeper-berth {{ 'booked' if not seat.is_available else '' }}" 
+                                    id="seat-{{ seat.id }}" 
+                                    onclick="selectSeat('{{ seat.id }}', '{{ seat.seat_no }}', {{ seat.price }})">
+                                    <span class="seat-label" style="font-size: 11px;">{{ seat.seat_no }}</span>
+                                    <div style="font-size: 9px; opacity: 0.7;">₹{{ seat.price | int }}</div>
+                                </div>
+                            {% else %}<div class="aisle" style="width: 40px;"></div>{% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {# --- LOWER DECK / MAIN SEATING --- #}
+            <div class="deck-label mb-2">
+                <span class="badge bg-secondary">{{ 'Lower Deck' if is_sleeper else 'Seating Plan' }}</span>
+            </div>
+            <div class="bus-container shadow-sm mb-4">
+                <div class="bus-front-header">
+                    <i class="bi bi-steering-wheel steering-icon"></i>
+                </div>
+
+                <div class="bus-grid {{ 'sleeper-grid' if is_sleeper else 'seater-grid' }}">
+                    {% if is_sleeper %}
+                        {# 36-Seat Sleeper Lower Deck Logic (6 Rows) #}
+                        {% for r in range(1, 7) %}
+                            {% for c in [1, 2, 3, 4] %}
+                                {% set seat = seats | selectattr("deck", "equalto", "Lower") | selectattr("row", "equalto", r) | selectattr("column", "equalto", c) | first %}
+                                {% if seat %}
+                                    <div class="seat sleeper-berth {{ 'booked' if not seat.is_available else '' }}" 
+                                        id="seat-{{ seat.id }}" 
+                                        onclick="selectSeat('{{ seat.id }}', '{{ seat.seat_no }}', {{ seat.price }})">
+                                        <span class="seat-label" style="font-size: 11px;">{{ seat.seat_no }}</span>
+                                        <div style="font-size: 9px; opacity: 0.7;">₹{{ seat.price | int }}</div>
+                                    </div>
+                                {% else %}<div class="aisle" style="width: 40px;"></div>{% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    {% else %}
+                        {# Original 45-Seat Seater Logic (11 Rows) #}
+                        {% for r in range(1, 12) %}
+                            {% for c in range(1, 6) %}
+                                {% set found_seat = seats | selectattr("deck", "equalto", "Lower") | selectattr("row", "equalto", r) | selectattr("column", "equalto", c) | first %}
+                                {% if found_seat %}
+                                    <div class="seat {{ 'booked' if not found_seat.is_available else '' }}" 
+                                        id="seat-{{ found_seat.id }}" 
+                                        onclick="selectSeat('{{ found_seat.id }}', '{{ found_seat.seat_no }}', {{ found_seat.price }})">
+                                        <span class="seat-label" style="font-size: 14px;">{{ found_seat.seat_no }}</span>
+                                        <div style="font-size: 9px; opacity: 0.7;">₹{{ found_seat.price | int }}</div>
+                                    </div>
+                                {% elif c == 3 and r < 11 %}
+                                    <div class="aisle"></div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm sticky-top" style="top: 20px;">
+                <div class="card-body">
+                    <h5>Booking Details</h5>
+                    <hr>
+                    <div id="passenger-forms-container" class="mb-3" style="max-height: 400px; overflow-y: auto;">
+                        <p class="text-muted text-center small">Click seats on the left to add passengers</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Boarding Point</label>
+                        <select id="board_station" class="form-select" onchange="updatePrice()">
+                            <option value="">Select Boarding Station</option>
+                            {% for st in stations %}
+                            <option value="{{ st.id }}">{{ st.name }} ({{ st.arrival_time }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Alighting Point</label>
+                        <select id="alight_station" class="form-select" onchange="updatePrice()">
+                            <option value="">Select Drop-off Station</option>
+                            {% for st in stations %}
+                            <option value="{{ st.id }}">{{ st.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn btn-success btn-lg w-100" onclick="confirmBooking()">
+                        Confirm & Book Tickets
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedSeats = []; 
+let currentStationAdjustment = 0; 
+const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+const loginUrl = "{{ url_for('login') }}";
+
+function selectSeat(id, seatNo, price) {
+    if (!isAuthenticated) {
+        Swal.fire({
+            title: 'Login Required', text: 'You must be logged in to book seats.', icon: 'warning', confirmButtonText: 'Login Now'
+        }).then(() => { window.location.href = loginUrl + "?next=" + window.location.pathname; });
+        return;
+    }
+    const element = document.getElementById('seat-' + id);
+    if (element.classList.contains('booked')) return;
+    const index = selectedSeats.findIndex(s => s.id === id);
+    if (index > -1) {
+        selectedSeats.splice(index, 1);
+        element.classList.remove('selected');
+    } else {
+        if (selectedSeats.length >= 6) { Swal.fire('Limit', 'Max 6 seats.', 'info'); return; }
+        selectedSeats.push({ id: id, no: seatNo, price: price });
+        element.classList.add('selected');
+    }
+    renderPassengerForms();
+    updateDisplayPrice();
+}
+
+function updatePrice() {
+    const bId = document.getElementById('board_station').value;
+    const aId = document.getElementById('alight_station').value;
+    if (!bId || !aId || selectedSeats.length === 0) { currentStationAdjustment = 0; updateDisplayPrice(); return; }
+    fetch('/calculate-dynamic-price', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bus_id: "{{ bus.id }}", board_id: bId, alight_id: aId, seat_id: selectedSeats[0].id })
+    }).then(res => res.json()).then(data => {
+        if (data.success) { currentStationAdjustment = data.final_price - selectedSeats[0].price; updateDisplayPrice(); }
+    });
+}
+
+function updateDisplayPrice() {
+    const seatSum = selectedSeats.reduce((sum, s) => sum + s.price, 0);
+    const totalAdj = selectedSeats.length * currentStationAdjustment;
+    document.getElementById('display_price').innerText = '₹ ' + (seatSum + totalAdj).toLocaleString();
+}
+
+function renderPassengerForms() {
+    const container = document.getElementById('passenger-forms-container');
+    if (selectedSeats.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center small">Click seats to add passengers</p>';
+        return;
+    }
+    container.innerHTML = selectedSeats.map(s => `
+        <div class="passenger-card p-3 border rounded mb-3" data-seat-id="${s.id}" data-price="${s.price}">
+            <h6 class="small fw-bold text-primary">Seat ${s.no} - ₹${s.price}</h6>
+            <div class="row g-2">
+                <div class="col-md-6"><input type="text" class="form-control form-control-sm p-name" placeholder="Name" required></div>
+                <div class="col-md-3"><input type="number" class="form-control form-control-sm p-age" placeholder="Age" required></div>
+                <div class="col-md-3">
+                    <select class="form-select form-select-sm p-gender">
+                        <option value="Male">Male</option><option value="Female">Female</option>
+                    </select>
+                </div>
+            </div>
+        </div>`).join('');
+}
+
+function confirmBooking() {
+    const boardId = document.getElementById('board_station').value;
+    const alightId = document.getElementById('alight_station').value;
+
+    if (selectedSeats.length === 0 || !boardId || !alightId) { 
+        Swal.fire('Error', 'Please select seats, boarding, and alighting points', 'error'); 
+        return; 
+    }
+    
+    let passengers = [];
+    document.querySelectorAll('.passenger-card').forEach(card => {
+        const name = card.querySelector('.p-name').value;
+        const age = card.querySelector('.p-age').value;
+        if (!name || !age) {
+            Swal.fire('Error', 'Please fill all passenger details', 'warning');
+            return;
+        }
+        passengers.push({ 
+            seat_id: card.dataset.seatId, 
+            name: name, 
+            age: age, 
+            gender: card.querySelector('.p-gender').value 
+        });
+    });
+
+    fetch('/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            bus_id: "{{ bus.id }}", 
+            board_id: boardId, 
+            alight_id: alightId, 
+            passengers: passengers 
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) { 
+            window.location.href = '/booking-success/' + data.booking_id; 
+        } else {
+            Swal.fire('Booking Failed', data.msg, 'error');
+        }
+    });
+}
+</script>
+{% endblock %}

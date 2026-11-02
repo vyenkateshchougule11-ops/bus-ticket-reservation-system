@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    /* Seat Grid Layout */
+    .bus-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 50px); 
+        grid-gap: 15px;
+        justify-content: center;
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        width: fit-content;
+        margin: 20px auto;
+    }
+
+    .seat {
+        width: 50px;
+        height: 50px;
+        border: 2px solid #28a745;
+        border-radius: 5px;
+        text-align: center;
+        cursor: pointer;
+        line-height: 50px;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+
+    .seat:hover:not(.booked) { background-color: #d4edda; }
+
+    .seat.booked {
+        background-color: #6c757d;
+        border-color: #5a6268;
+        color: white;
+        cursor: not-allowed;
+    }
+
+    .seat.selected {
+        background-color: #007bff;
+        color: white;
+        border-color: #0056b3;
+    }
+
+    .aisle { visibility: hidden; }
+
+    .passenger-card {
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="row bus-info-header border-bottom pb-3 mb-4">
+        <div class="col-md-8">
+            <h3>{{ bus.name }}</h3>
+            <p class="text-muted">
+                {{ bus.bus_type }} | Layout: {{ bus.layout_type }} | 
+                <span class="text-primary">{{ bus.departure_date_time.strftime('%I:%M %p') }} - {{ bus.arrival_date_time.strftime('%I:%M %p') }}</span>
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <small class="text-muted">Total Fare</small>
+            <h2 class="text-success" id="display_price">₹{{ bus.base_price|int }}</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card shadow-sm p-4">
+                <h5 class="text-center mb-4">Select Seats (Max 6)</h5>
+                <div class="bus-grid">
+                    {% for r in range(1, 11) %}
+                        {% for c in range(1, 6) %}
+                            {# STEP 1: Define 'found_seat' using a filter #}
+                            {% set found_seat = seats | selectattr("row", "equalto", r) | selectattr("column", "equalto", c) | first %}
+                            
+                            {% if found_seat %}
+                                {# STEP 2: Use 'found_seat' consistently in the HTML #}
+                                <div class="seat {{ 'booked' if not found_seat.is_available else '' }}" 
+                                    id="seat-{{ found_seat.id }}" 
+                                    onclick="selectSeat('{{ found_seat.id }}', '{{ found_seat.seat_no }}', {{ found_seat.price }})">
+                                    <span class="seat-label">{{ found_seat.seat_no }}</span>
+                                    <div style="font-size: 9px; color: #666;">₹{{ found_seat.price | int }}</div>
+                                </div>
+                            {% else %}
+                                <div class="aisle"></div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm sticky-top" style="top: 20px;">
+                <div class="card-body">
+                    <h5>Booking Details</h5>
+                    <hr>
+                    
+                    <div id="passenger-forms-container" class="mb-3" style="max-height: 400px; overflow-y: auto;">
+                        <p class="text-muted text-center small">Click seats on the left to add passengers</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Boarding Point</label>
+                        <select id="board_station" class="form-select" onchange="updatePrice()">
+                            <option value="">Select Boarding Station</option>
+                            {% for st in stations %}
+                            <option value="{{ st.id }}">{{ st.name }} ({{ st.arrival_time }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Alighting Point</label>
+                        <select id="alight_station" class="form-select" onchange="updatePrice()">
+                            <option value="">Select Drop-off Station</option>
+                            {% for st in stations %}
+                            <option value="{{ st.id }}">{{ st.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn btn-success btn-lg w-100" onclick="confirmBooking()">
+                        Confirm & Book Tickets
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedSeats = []; // Array of {id, seatNo}
+let perSeatPrice = {{ bus.base_price }};
+const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+const loginUrl = "{{ url_for('login') }}";
+
+
+// ***********************************
+
+// Inside your processBooking success block:
+if (result.success) {
+    Swal.fire({
+        title: 'Booked!',
+        text: 'Tickets confirmed.',
+        icon: 'success',
+        confirmButtonText: 'View Summary'
+    }).then(() => {
+        // REDIRECT TO THE SUCCESS PAGE
+        window.location.href = '/booking-success/' + result.booking_id;
+    });
+}
+
+// ************************************
+
+function selectSeat(id, seatNo) {
+    if (!isAuthenticated) {
+        Swal.fire({
+            title: 'Login Required',
+            text: 'You must be logged in to book seats.',
+            icon: 'warning',
+            confirmButtonText: 'Login Now'
+        }).then(() => {
+            window.location.href = loginUrl + "?next=" + window.location.pathname;
+        });
+        return;
+    }
+
+    const element = document.getElementById('seat-' + id);
+    if (element.classList.contains('booked')) return;
+
+    const index = selectedSeats.findIndex(s => s.id === id);
+    if (index > -1) {
+        // Deselect
+        selectedSeats.splice(index, 1);
+        element.classList.remove('selected');
+    } else {
+        // Select
+        if (selectedSeats.length >= 6) {
+            Swal.fire('Limit', 'You can select up to 6 seats.', 'info');
+            return;
+        }
+        selectedSeats.push({ id: id, no: seatNo });
+        element.classList.add('selected');
+    }
+    
+    renderPassengerForms();
+    updateDisplayPrice();
+}
+
+function renderPassengerForms() {
+    const container = document.getElementById('passenger-forms-container');
+    if (selectedSeats.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center small">Click seats on the left to add passengers</p>';
+        return;
+    }
+
+    container.innerHTML = selectedSeats.map((seat, i) => `
+        <div class="passenger-card p-3 border rounded mb-3" data-seat-id="${seat.id}">
+            <h6 class="small fw-bold text-primary">Seat ${seat.no}</h6>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <input type="text" class="form-control form-control-sm p-name" placeholder="Full Name" required>
+                </div>
+                <div class="col-md-3">
+                    <input type="number" class="form-control form-control-sm p-age" placeholder="Age" required>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select form-select-sm p-gender">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updatePrice() {
+    const boardId = document.getElementById('board_station').value;
+    const alightId = document.getElementById('alight_station').value;
+
+    if (boardId || alightId) {
+        fetch('/calculate-dynamic-price', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bus_id: "{{ bus.id }}",
+                board_id: boardId,
+                alight_id: alightId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                perSeatPrice = data.final_price;
+                updateDisplayPrice();
+            }
+        });
+    }
+}
+
+function updateDisplayPrice() {
+    const total = selectedSeats.length * perSeatPrice;
+    document.getElementById('display_price').innerText = '₹ ' + total;
+}
+
+function confirmBooking() {
+    if (selectedSeats.length === 0) {
+        Swal.fire('Error', 'Please select at least one seat', 'error');
+        return;
+    }
+
+    const boardId = document.getElementById('board_station').value;
+    const alightId = document.getElementById('alight_station').value;
+
+    if (!boardId || !alightId) {
+        Swal.fire('Error', 'Please select boarding and alighting points', 'error');
+        return;
+    }
+
+    // Collect passenger data
+    const passengerCards = document.querySelectorAll('.passenger-card');
+    let passengers = [];
+    
+    for (let card of passengerCards) {
+        const name = card.querySelector('.p-name').value;
+        const age = card.querySelector('.p-age').value;
+        const gender = card.querySelector('.p-gender').value;
+        const seatId = card.dataset.seatId;
+
+        if (!name || !age) {
+            Swal.fire('Missing Info', 'Please fill all passenger details', 'warning');
+            return;
+        }
+
+        passengers.push({
+            seat_id: seatId,
+            name: name,
+            age: age,
+            gender: gender
+        });
+    }
+
+    Swal.fire({
+        title: 'Confirm Booking?',
+        text: `Booking ${selectedSeats.length} seat(s) for ₹ ${selectedSeats.length * perSeatPrice}`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Book now!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Sending as JSON because of complex nested passenger data
+            fetch('/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bus_id: "{{ bus.id }}",
+                    board_id: boardId,
+                    alight_id: alightId,
+                    passengers: passengers
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Tickets reserved successfully.',
+                        icon: 'success',
+                        confirmButtonText: 'Download Ticket'
+                    }).then(() => {
+                        window.location.href = '/download-ticket/' + data.booking_id;
+                    });
+                } else {
+                    Swal.fire('Failed', data.msg, 'error');
+                }
+            });
+        }
+    });
+}
+</script>
+
+{% endblock %}

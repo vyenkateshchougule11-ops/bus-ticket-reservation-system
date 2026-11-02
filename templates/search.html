@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results - {{ source.name }} to {{ dest.name }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .bus-card { transition: transform 0.2s; border: none; box-shadow: 0 2px 15px rgba(0,0,0,0.1); border-radius: 12px; }
+        .bus-card:hover { transform: translateY(-5px); }
+        .amenity-icon { font-size: 1.2rem; margin-right: 12px; color: #6c757d; }
+        .agency-name { color: #d84e55; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .time-label { font-size: 1.25rem; font-weight: 700; color: #222; }
+        .duration-line { height: 2px; background: #ddd; position: relative; flex-grow: 1; margin: 0 15px; }
+        .duration-text { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 8px; font-size: 0.75rem; color: #777; }
+        .price-tag { color: #111; font-weight: 800; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3>{{ buses|length }} Buses found from <strong>{{ source.name }}</strong> to <strong>{{ dest.name }}</strong></h3>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Modify Search</a>
+        </div>
+
+        {% for bus in buses %}
+        <div class="card bus-card mb-4">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <h5 class="agency-name mb-1">{{ bus.owner_agency.name }}</h5>
+                        <p class="text-muted small mb-3">{{ bus.name }}</p>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-light text-dark border">{{ bus.bus_type }}</span>
+                            <span class="badge bg-light text-dark border">{{ bus.layout_type }}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 text-center">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-start">
+                                <div class="time-label">{{ bus.departure_date_time.strftime('%H:%M') }}</div>
+                                <div class="text-muted small">{{ source.name }}</div>
+                            </div>
+                            
+                            <div class="duration-line">
+                                <span class="duration-text">{{ bus.travel_duration_hours }}h</span>
+                            </div>
+                            
+                            <div class="text-end">
+                                <div class="time-label">{{ bus.arrival_date_time.strftime('%H:%M') }}</div>
+                                <div class="text-muted small">{{ dest.name }}</div>
+                            </div>
+                        </div>
+                        <div class="mt-3 small text-primary fw-semibold">
+                            <i class="bi bi-calendar3"></i> {{ bus.departure_date_time.strftime('%d %b, %Y') }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 border-start text-center">
+                        <div class="mb-3">
+                            {% if bus.is_ac %}<i class="bi bi-snow amenity-icon" title="AC"></i>{% endif %}
+                            {% if bus.has_food %}<i class="bi bi-egg-fried amenity-icon" title="Food Included"></i>{% endif %}
+                            {% if bus.has_water %}<i class="bi bi-droplet amenity-icon" title="Water Provided"></i>{% endif %}
+                            {% if bus.has_snacks %}<i class="bi bi-cup-hot amenity-icon" title="Snacks Available"></i>{% endif %}
+                        </div>
+                        <h4 class="price-tag mb-0">₹ {{ "{:,.2f}".format(bus.base_price) }}</h4>
+                        <small class="text-muted">per seat</small>
+                    </div>
+
+                    <div class="col-md-2 text-center">
+                        <a href="{{ url_for('seats', bus_id=bus.id) }}" class="btn btn-danger w-100 fw-bold mb-2 py-2">SELECT SEATS</a>
+                        <button class="btn btn-outline-dark btn-sm w-100 border-0" type="button" data-bs-toggle="collapse" data-bs-target="#details{{ bus.id }}" aria-expanded="false">
+                            <i class="bi bi-images"></i> View Photos
+                        </button>
+                    </div>
+                </div>
+
+                <div class="collapse mt-4" id="details{{ bus.id }}">
+                    <div class="p-3 bg-light rounded shadow-inner">
+                        <h6 class="mb-3 text-muted fw-bold small">BUS INTERIOR & EXTERIOR</h6>
+                        <div class="row g-3">
+    {% set img_list = bus.images.split(',') if bus.images else [] %}
+    {% for img in img_list %}
+        {% if img.strip() %} {# Ensure the filename isn't just whitespace #}
+        <div class="col-md-3">
+            <div class="ratio ratio-16x9">
+                <img src="{{ url_for('static', filename='bus_images/' + img.strip()) }}" 
+                     class="rounded shadow-sm object-fit-cover" 
+                     alt="Bus View"
+                     onerror="this.src='https://via.placeholder.com/400x225?text=Image+Not+Found';">
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not buses %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-bus-front text-muted" style="font-size: 5rem;"></i>
+                <h4 class="mt-4 fw-bold">No buses found for this route.</h4>
+                <p class="text-muted">Try changing the date or searching for nearby cities.</p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary px-4 mt-3">Try Another Search</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

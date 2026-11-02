@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Arial', sans-serif; color: #333; padding: 20px; }
+        .ticket { border: 2px solid #333; padding: 25px; border-radius: 10px; max-width: 650px; margin: auto; }
+        .header { text-align: center; border-bottom: 3px solid #d84e55; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { color: #d84e55; margin: 0; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .label { font-size: 11px; color: #888; text-transform: uppercase; }
+        .value { font-size: 16px; font-weight: bold; }
+        .seat { font-size: 30px; color: #d84e55; }
+        .footer { margin-top: 30px; text-align: center; font-size: 12px; border-top: 1px solid #eee; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="ticket">
+        <div class="header">
+            <h1>BusReserve E-Ticket</h1>
+            <p>Booking ID: #{{ booking.id }} | Date: {{ booking.booking_date.strftime('%d %b %Y') }}</p>
+        </div>
+        <div class="row">
+            <div>
+                <div class="label">Passenger</div>
+                <div class="value">{{ booking.passenger_name }}</div>
+                <small>{{ booking.passenger_age }} yrs | {{ booking.passenger_gender }}</small>
+            </div>
+            <div style="text-align: right;">
+                <div class="label">Seat</div>
+                <div class="value seat">{{ booking.seat.seat_no }}</div>
+            </div>
+        </div>
+        <div class="row">
+            <div>
+                <div class="label">Route</div>
+                <div class="value">{{ booking.bus.source.name }} &rarr; {{ booking.bus.destination.name }}</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="label">Departure</div>
+                <div class="value">{{ booking.bus.departure_date_time.strftime('%I:%M %p') }}</div>
+            </div>
+        </div>
+        <div class="footer">
+            Agency: {{ booking.bus.owner_agency.name }} | Amount Paid: ₹{{ booking.final_price }}
+        </div>
+    </div>
+</body>
+</html>
